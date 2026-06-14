@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { Pool } from 'pg';
-import { PedidosController } from './presentation/orders.controller';
-import { RepositorioPedidoPostgres } from './infrastructure/postgres-order.repository';
+import { PedidosController } from './presentation/pedidos.controller';
+import { RepositorioPedidoPostgres } from './infrastructure/repositorio-pedido-postgres';
+import { FinalizarPedidoUseCase } from './application/finalizar-pedido.use-case';
+import { PublicadorPedido } from './domain/observadores/pedido.observer';
+
+import { RepositorioPedidoLogDecorator } from './domain/repositorios/pedido.repository.log-decorator';
 
 @Module({
   controllers: [PedidosController],
@@ -16,6 +20,16 @@ import { RepositorioPedidoPostgres } from './infrastructure/postgres-order.repos
         await repo.garantirTabela();
         return repo;
       },
+    },
+    PublicadorPedido,
+    {
+      provide: FinalizarPedidoUseCase,
+      useFactory: (repo: RepositorioPedidoPostgres, pub: PublicadorPedido) => {
+        // Aplicação do Padrão Decorator
+        const repoComLog = new RepositorioPedidoLogDecorator(repo);
+        return new FinalizarPedidoUseCase(repoComLog, pub);
+      },
+      inject: [RepositorioPedidoPostgres, PublicadorPedido],
     },
   ],
 })

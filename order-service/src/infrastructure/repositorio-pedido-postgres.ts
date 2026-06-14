@@ -1,7 +1,8 @@
 import { Pool } from 'pg';
-import { Pedido } from '../domain/order';
+import { Pedido } from '../domain/entidades/pedido.entity';
+import { RepositorioPedido } from '../domain/repositorios/pedido.repository';
 
-export class RepositorioPedidoPostgres {
+export class RepositorioPedidoPostgres implements RepositorioPedido {
   constructor(private readonly pool: Pool) {}
 
   async garantirTabela(): Promise<void> {

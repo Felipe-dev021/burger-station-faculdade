@@ -1,5 +1,5 @@
-import { EstrategiaTaxaFixa } from '../../src/domain/strategies/fixed-fee.strategy';
-import { EstrategiaDescontoPercentual } from '../../src/domain/strategies/percentage-discount.strategy';
+import { EstrategiaTaxaFixa } from '../../src/domain/estrategias/fixed-fee.strategy';
+import { EstrategiaDescontoPercentual } from '../../src/domain/estrategias/percentage-discount.strategy';
 
 describe('Estrategias de precificacao', () => {
   it('aplica 10% de desconto para pedidos acima do limite', () => {

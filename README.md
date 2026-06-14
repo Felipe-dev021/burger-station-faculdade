@@ -17,8 +17,6 @@ O backend é dividido em 2 microsserviços independentes (cada um com seu própr
 | **menu-service** | 3002 | Gestão e listagem do catálogo de produtos | PostgreSQL | `menu-service` |
 | **frontend** | 8080 | Interface única que consome os 2 serviços | — | `frontend` |
 
-**Transparência para o usuário:** Quem usa o sistema acessa um único site (o frontend). Ele não percebe que existem serviços distintos — o React chama cada API nos bastidores. Se um serviço falhar, o outro permanece isolado e funcional.
-
 ### Arquitetura do Sistema
 ```
               ┌────────────┐
@@ -34,7 +32,7 @@ O backend é dividido em 2 microsserviços independentes (cada um com seu própr
 ```
 
 ## 3. Estrutura do repositório (monorepo)
-O projeto utiliza uma estrutura de monorepo para facilitar o gerenciamento, mantendo a independência técnica de cada serviço:
+O projeto utiliza uma estrutura de monorepo, mantendo a independência técnica de cada serviço:
 
 ```
 BurgerStation/
@@ -57,64 +55,60 @@ BurgerStation/
 ## 5. Arquitetura Limpa
 Cada serviço segue a organização em camadas para isolar as regras de negócio:
 
-- **src/domain/**: Núcleo: entidades (`Pedido`, `MenuItem`), regras e interfaces de repositório.
-- **src/application/**: Casos de uso (`FinalizarPedidoUseCase`, `ListarCardapioUseCase`) que orquestram o domínio.
-- **src/infrastructure/**: Implementações concretas: Repositórios Postgres, Controllers (HTTP) e Gateways.
+- **src/domain/**: Núcleo (Linguagem Ubíqua):
+  - `entidades/`: Regras e objetos de negócio (`Pedido`).
+  - `repositorios/`: Contratos de acesso a dados.
+  - `estrategias/`: Regras de precificação (Strategy).
+  - `fabricas/`: Criação de objetos complexos (Factory).
+  - `observadores/`: Comunicação entre componentes (Observer).
+- **src/application/**: Casos de uso (`FinalizarPedidoUseCase`) que orquestram o fluxo.
+- **src/infrastructure/**: Implementações concretas (Postgres, Console Log).
+- **src/presentation/**: Controladores de entrada (HTTP).
 
 ## 6. Princípios SOLID
-- **S (Single Responsibility):** Cada caso de uso faz uma única coisa (ex: `FinalizarPedidoUseCase` apenas processa a finalização).
-- **O (Open/Closed):** Novas estratégias de precificação entram como novas `EstrategiaPrecificacao` sem alterar o fluxo de checkout.
-- **L (Liskov):** Repositórios em memória substituem o Postgres nos testes sem quebrar a aplicação.
-- **I (Interface Segregation):** Interfaces específicas para cada contexto (`RepositorioPedido`, `ObservadorPedido`).
-- **D (Dependency Inversion):** Casos de uso dependem de interfaces; as implementações concretas são injetadas via NestJS.
+- **S (Single Responsibility):** Classes pequenas e focadas.
+- **O (Open/Closed):** Adição de novos descontos via Strategy sem alterar o checkout.
+- **L (Liskov):** Repositórios em memória substituem o real nos testes.
+- **I (Interface Segregation):** Interfaces magras e específicas.
+- **D (Dependency Inversion):** Uso intensivo de Injeção de Dependência via NestJS.
 
-## 7. Design Patterns (4)
+## 7. Design Patterns (5 Aplicados)
 | Padrão | Onde | Arquivo |
 | :--- | :--- | :--- |
-| **Repository** | Acesso a dados desacoplado | `order.repository.ts` + `postgres-order.repository.ts` |
-| **Factory** | Criação centralizada da entidade | `order.factory.ts` (`FabricaPedido`) |
-| **Strategy** | Cálculo de desconto dinâmico | `strategies/percentage-discount.strategy.ts` |
-| **Observer** | Notificação de novos pedidos | `order.observer.ts` (`PublicadorPedido`) |
+| **Repository** | Desacoplamento de dados | `repositorios/pedido.repository.ts` |
+| **Factory Method** | Criação centralizada | `fabricas/pedido.factory.ts` |
+| **Strategy** | Descontos dinâmicos | `estrategias/percentage-discount.strategy.ts` |
+| **Observer** | Notificação de eventos | `observadores/pedido.observer.ts` |
+| **Decorator** | Logs de banco sem poluir o código | `repositorios/pedido.repository.log-decorator.ts` |
 
 ## 8. Evidências de Clean Code
-- **Nomenclatura Clara:** Uso de termos do negócio no código (ex: `EstrategiaTaxaFixa`, `RepositorioPedidoEmMemoria`).
-- **Funções Pequenas:** Métodos focados e com responsabilidade única.
-- **Tratamento de Erros:** Erros lançados de forma explícita quando uma regra de negócio é violada.
+- **Linguagem Ubíqua:** Nomes de domínio em português para fidelidade ao negócio.
+- **Composição sobre Herança:** Uso de Decorator para extender funcionalidades.
+- **Ausência de Comentários:** O código é autoexplicativo através de nomes claros.
 
-## 9. TDD — testes unitários
-Os testes foram escritos antes da implementação, utilizando mocks e repositórios em memória.
-```bash
-# No diretório order-service
-npm test
-```
+## 9. TDD e BDD
+- **TDD:** Testes unitários (`npm test`) criados antes da implementação.
+- **BDD:** Cenários Gherkin em português para validação de comportamentos.
 
-## 10. BDD — cenários Gherkin
-Utilizamos cenários em português para validar as regras de desconto. Exemplo:
-```gherkin
-Funcionalidade: Cálculo de Desconto
-  Cenário: Aplicar desconto percentual
-    Dado que o valor do pedido é 100
-    Quando eu aplico a estratégia de desconto de 10%
-    Então o valor final deve ser 90
-```
-```bash
-# Executar testes BDD
-npm run test:bdd
-```
-
-## 11. Como rodar localmente
-**Opção A — Docker Compose (Recomendado)**
+## 10. Como rodar localmente
 ```bash
 docker compose up --build
 ```
-Isso subirá o PostgreSQL, o Order Service (3001), o Menu Service (3002) e o Frontend (8080).
+Acesse o sistema em [http://localhost:8080](http://localhost:8080).
 
-**Opção B — Manual (Desenvolvimento)**
-1. Suba o banco de dados via Docker.
-2. Em `order-service` e `menu-service`: `npm install && npm run start:dev`.
-3. Em `frontend`: `npm install && npm run dev`.
+## 11. 🔗 Acesso ao sistema (Deploy Ativo)
+A aplicação está publicada e funcional utilizando serviços de nuvem gratuitos e escaláveis.
 
-## 12. Variáveis de Ambiente
-Cada serviço possui seu arquivo `.env`. Principais variáveis:
-- `PORT`: Porta de execução do serviço.
-- `DATABASE_URL`: String de conexão com o PostgreSQL.
+| O quê | Link |
+| :--- | :--- |
+| **Aplicação (Frontend)** | [https://burger-station-faculdade-git-main-zezim.vercel.app/](https://burger-station-faculdade-git-main-zezim.vercel.app/) |
+| **API Pedidos (Swagger)** | [https://burger-order-api.onrender.com/docs](https://burger-order-api.onrender.com/docs) |
+| **API Cardápio (Swagger)** | [https://burger-menu-api.onrender.com/docs](https://burger-menu-api.onrender.com/docs) |
+
+> **Nota:** Os serviços no Render entram em hibernação após 15 min de inatividade. O primeiro acesso pode levar cerca de 30 segundos para "acordar".
+
+## 12. Justificativa Técnica das Escolhas
+- **Vercel (Frontend):** Escolhida pela integração nativa com React/Vite e excelente performance global (Edge Network).
+- **Render (Backend):** Utilizado para hospedar os microsserviços em containers Docker de forma isolada e gratuita.
+- **Neon (PostgreSQL):** Banco de dados Serverless que permite separar os dados de cada microsserviço com alta disponibilidade e custo zero para o projeto.
+- **Monorepo:** Facilita a gestão de múltiplos serviços em um único lugar, mantendo a independência de build e deploy de cada um.

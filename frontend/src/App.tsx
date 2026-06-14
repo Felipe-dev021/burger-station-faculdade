@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './styles.css'; 
 
-const URL_MENU = 'https://burger-menu-api.onrender.com';
-const URL_ORDERS = 'https://burger-order-api.onrender.com';
+// URLs das APIs - Prioriza variáveis de ambiente do Vite, com fallback para os links de produção
+const env = (import.meta as any).env;
+const URL_MENU = env?.VITE_MENU_URL || 'https://burger-menu-api.onrender.com';
+const URL_ORDERS = env?.VITE_ORDER_URL || 'https://burger-order-api.onrender.com';
 
 interface ItemCardapio { id: number; nome: string; preco: number; categoria: string; estoque: number; }
 interface Pedido { id: number; total: number; mesa: number; status: 'PENDENTE' | 'COZINHA' | 'PRONTO' | 'ENTREGUE'; itens: string; }
@@ -12,6 +14,7 @@ export default function App() {
   const [autenticado, setAutenticado] = useState(false);
   const [loginForm, setLoginForm] = useState({ user: '', pass: '' });
   const [mesa] = useState<number>(() => Math.floor(Math.random() * 15) + 1);
+  const [tipoPagamento, setTipoPagamento] = useState<'PIX' | 'CARTAO'>('PIX');
 
   const [cardapio, setCardapio] = useState<ItemCardapio[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -66,25 +69,32 @@ export default function App() {
     }
   };
 
-  const calcularTotal = () => Object.entries(carrinho).reduce((sum, [id, qtd]) => {
+  const calcularSubtotal = () => Object.entries(carrinho).reduce((sum, [id, qtd]) => {
     const item = cardapio.find(c => c.id === Number(id));
     return sum + (item ? item.preco * qtd : 0);
   }, 0);
 
+  const calcularTotalComDesconto = () => {
+    const subtotal = calcularSubtotal();
+    if (tipoPagamento === 'PIX') return subtotal * 0.9; // 10% OFF
+    return subtotal + 5; // + Taxa fixa de 5
+  };
+
   const enviarPedido = async () => {
-    const total = calcularTotal();
+    const total = calcularSubtotal();
     if (total === 0) return;
     const itensTexto = Object.entries(carrinho).map(([id, qtd]) => `${qtd}x ${cardapio.find(c => c.id === Number(id))?.nome}`).join(', ');
 
-    await fetch(`${URL_ORDERS}/pedidos`, {
+    const res = await fetch(`${URL_ORDERS}/pedidos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ total, mesa, itens: itensTexto }),
+      body: JSON.stringify({ total, mesa, itens: itensTexto, tipoPagamento }),
     });
+    const pedidoCriado = await res.json();
 
     setCardapio(prev => prev.map(item => ({ ...item, estoque: item.estoque - (carrinho[item.id] || 0) })));
     setCarrinho({});
-    alert("Pedido enviado com sucesso para a cozinha!");
+    alert(`Pedido enviado! Total com desconto/taxa: R$ ${pedidoCriado.total.toFixed(2)}`);
     carregarPedidos();
   };
 
@@ -131,21 +141,51 @@ export default function App() {
               {Object.keys(carrinho).length === 0 ? (
                 <p style={{ color: '#6b7280', textAlign: 'center', margin: '20px 0' }}>Selecione os produtos desejados.</p>
               ) : (
-                Object.keys(carrinho).map(id => {
-                  const item = cardapio.find(c => c.id === Number(id));
-                  return (
-                    <div key={id} className="comanda-item">
-                      <span><strong>{carrinho[Number(id)]}x</strong> {item?.nome}</span>
-                      <span>R$ {((item?.preco || 0) * carrinho[Number(id)]).toFixed(2)}</span>
+                <>
+                  {Object.keys(carrinho).map(id => {
+                    const item = cardapio.find(c => c.id === Number(id));
+                    return (
+                      <div key={id} className="comanda-item">
+                        <span><strong>{carrinho[Number(id)]}x</strong> {item?.nome}</span>
+                        <span>R$ {((item?.preco || 0) * carrinho[Number(id)]).toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
+                  
+                  <div className="pagamento-selector" style={{ marginTop: '20px', borderTop: '1px solid #374151', paddingTop: '15px' }}>
+                    <p style={{ fontSize: '14px', marginBottom: '10px' }}>Forma de Pagamento:</p>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button 
+                        className={`btn ${tipoPagamento === 'PIX' ? 'btn-primary' : 'btn-secondary'}`} 
+                        onClick={() => setTipoPagamento('PIX')}
+                        style={{ flex: 1, fontSize: '12px' }}
+                      >
+                        PIX (10% OFF)
+                      </button>
+                      <button 
+                        className={`btn ${tipoPagamento === 'CARTAO' ? 'btn-primary' : 'btn-secondary'}`} 
+                        onClick={() => setTipoPagamento('CARTAO')}
+                        style={{ flex: 1, fontSize: '12px' }}
+                      >
+                        CARTÃO (+R$5)
+                      </button>
                     </div>
-                  );
-                })
+                  </div>
+                </>
               )}
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', marginTop: '30px' }}>
-                <span>TOTAL:</span>
-                <span className="text-gold">R$ {calcularTotal().toFixed(2)}</span>
+
+              <div style={{ marginTop: '25px', padding: '15px', background: '#1f2937', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#9ca3af' }}>
+                  <span>Subtotal:</span>
+                  <span>R$ {calcularSubtotal().toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', marginTop: '5px' }}>
+                  <span>TOTAL FINAL:</span>
+                  <span className="text-gold">R$ {calcularTotalComDesconto().toFixed(2)}</span>
+                </div>
               </div>
-              <button className="btn btn-primary btn-action" onClick={enviarPedido} disabled={calcularTotal() === 0}>
+
+              <button className="btn btn-primary btn-action" onClick={enviarPedido} disabled={calcularSubtotal() === 0}>
                 CONFIRMAR PEDIDO
               </button>
             </aside>
@@ -177,7 +217,10 @@ export default function App() {
                     <div key={p.id} className="pedido-ticket">
                       <div className="pedido-header"><span>Mesa {p.mesa}</span><span className="text-gold">#{p.id.toString().slice(-3)}</span></div>
                       <p style={{fontSize: '14px', color: '#d1d5db'}}>{p.itens}</p>
-                      <button className="btn btn-secondary btn-action" onClick={() => mudarStatus(p.id, 'COZINHA')}>Preparar</button>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                        <span style={{ fontWeight: 'bold' }}>R$ {p.total.toFixed(2)}</span>
+                        <button className="btn btn-secondary" style={{ padding: '5px 10px', fontSize: '12px' }} onClick={() => mudarStatus(p.id, 'COZINHA')}>Preparar</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -188,7 +231,10 @@ export default function App() {
                     <div key={p.id} className="pedido-ticket" style={{ borderColor: '#f59e0b' }}>
                       <div className="pedido-header"><span>Mesa {p.mesa}</span><span className="text-gold">#{p.id.toString().slice(-3)}</span></div>
                       <p style={{fontSize: '14px', color: '#d1d5db'}}>{p.itens}</p>
-                      <button className="btn btn-primary btn-action" onClick={() => mudarStatus(p.id, 'PRONTO')}>Marcar como Pronto</button>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                         <span style={{ fontWeight: 'bold' }}>R$ {p.total.toFixed(2)}</span>
+                         <button className="btn btn-primary" style={{ padding: '5px 10px', fontSize: '12px' }} onClick={() => mudarStatus(p.id, 'PRONTO')}>Pronto</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -199,7 +245,10 @@ export default function App() {
                     <div key={p.id} className="pedido-ticket" style={{ borderColor: '#10b981' }}>
                       <div className="pedido-header"><span>Mesa {p.mesa}</span><span className="text-gold">#{p.id.toString().slice(-3)}</span></div>
                       <p style={{fontSize: '14px', color: '#d1d5db'}}>{p.itens}</p>
-                      <button className="btn btn-secondary btn-action" style={{borderColor: '#10b981', color: '#10b981'}} onClick={() => mudarStatus(p.id, 'ENTREGUE')}>Despachar à Mesa</button>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                        <span style={{ fontWeight: 'bold' }}>R$ {p.total.toFixed(2)}</span>
+                        <button className="btn btn-secondary" style={{borderColor: '#10b981', color: '#10b981', padding: '5px 10px', fontSize: '12px'}} onClick={() => mudarStatus(p.id, 'ENTREGUE')}>Despachar</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -208,6 +257,14 @@ export default function App() {
           )
         )}
       </div>
+
+      <footer className="footer" style={{ marginTop: '50px', padding: '20px', borderTop: '1px solid #374151', textAlign: 'center', fontSize: '12px', color: '#6b7280' }}>
+        <p>Burger Station — Projeto de Arquitetura de Software</p>
+        <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
+          <span>API Menu: <a href={URL_MENU} target="_blank" rel="noreferrer" style={{ color: '#f59e0b' }}>{URL_MENU}</a></span>
+          <span>API Pedidos: <a href={URL_ORDERS} target="_blank" rel="noreferrer" style={{ color: '#f59e0b' }}>{URL_ORDERS}</a></span>
+        </div>
+      </footer>
     </>
   );
 }

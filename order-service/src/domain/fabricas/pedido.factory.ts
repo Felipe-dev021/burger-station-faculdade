@@ -1,4 +1,4 @@
-import { Pedido } from './order';
+import { Pedido } from '../entidades/pedido.entity';
 
 export class FabricaPedido {
   static criar(total: number, mesa: number, itens: string): Pedido {

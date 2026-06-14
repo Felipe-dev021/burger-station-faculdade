@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { Given, Then, When } from '@cucumber/cucumber';
-import { EstrategiaTaxaFixa } from '../../src/domain/strategies/fixed-fee.strategy';
-import { EstrategiaDescontoPercentual } from '../../src/domain/strategies/percentage-discount.strategy';
+import { EstrategiaTaxaFixa } from '../../src/domain/estrategias/fixed-fee.strategy';
+import { EstrategiaDescontoPercentual } from '../../src/domain/estrategias/percentage-discount.strategy';
 
 let valorAtual = 0;
 let resultadoAtual = 0;

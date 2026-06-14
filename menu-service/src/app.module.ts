@@ -1,18 +1,21 @@
 import { Module } from '@nestjs/common';
 import { Pool } from 'pg';
+import { CardapioController } from './presentation/cardapio.controller';
+import { ListarCardapioUseCase } from './application/listar-cardapio-use-case';
+import { RepositorioCardapioPostgres } from './infrastructure/repositorio-cardapio-postgres';
 
 @Module({
-  controllers: [],
+  controllers: [CardapioController],
   providers: [
     {
-      provide: 'DATABASE_POOL',
-      useFactory: () => {
+      provide: RepositorioCardapioPostgres,
+      useFactory: async () => {
         const dbUrl = process.env.DATABASE_URL;
         if (!dbUrl) throw new Error('DATABASE_URL do Cardápio não configurada!');
         const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
 
-        // Cria a tabela de itens do cardápio com coluna de ESTOQUE se não existir
-        pool.query(`
+        // Cria a tabela de itens do cardápio se não existir
+        await pool.query(`
           CREATE TABLE IF NOT EXISTS cardapio (
             id SERIAL PRIMARY KEY,
             nome VARCHAR(100) NOT NULL,
@@ -21,10 +24,16 @@ import { Pool } from 'pg';
             estoque INT NOT NULL DEFAULT 10
           );
         `);
-        return pool;
+        return new RepositorioCardapioPostgres(pool);
       },
     },
+    {
+      provide: ListarCardapioUseCase,
+      useFactory: (repo: RepositorioCardapioPostgres) => {
+        return new ListarCardapioUseCase(repo);
+      },
+      inject: [RepositorioCardapioPostgres],
+    },
   ],
-  exports: ['DATABASE_POOL'],
 })
 export class AppModule {}
