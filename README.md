@@ -38,3 +38,4 @@ O sistema foi totalmente containerizado. Foram criados *Dockerfiles* otimizados 
 Para rodar a aplicação inteira (Frontend + 2 Microsserviços) na sua máquina, basta ter o Docker instalado e rodar o comando na raiz do projeto:
 ```bash
 docker compose up --build
+```

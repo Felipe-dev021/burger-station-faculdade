@@ -11,14 +11,15 @@ export class FinalizarPedidoUseCase {
     private readonly publicador: PublicadorPedido,
   ) {}
 
-  executar(total: number): Pedido {
-    const pedido = FabricaPedido.criar(total);
+  async executar(total: number, mesa: number, itens: string): Promise<Pedido> {
+    const pedido = FabricaPedido.criar(total, mesa, itens);
     const desconto = this.estrategia.calcular(total);
-    const pedidoFinalizado = new Pedido(pedido.id, total - desconto);
+    
+    pedido.total = total - desconto;
 
-    this.repositorio.salvar(pedidoFinalizado);
-    this.publicador.notificar(pedidoFinalizado);
+    await this.repositorio.salvar(pedido);
+    this.publicador.notificar(pedido);
 
-    return pedidoFinalizado;
+    return pedido;
   }
 }
