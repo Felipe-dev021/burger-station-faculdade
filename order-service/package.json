@@ -1,0 +1,30 @@
+{
+  "name": "orderlite-order-service",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js",
+    "test": "npm run test:unit && npm run test:bdd",
+    "test:unit": "jest",
+    "test:bdd": "cucumber-js --require-module ts-node/register --require test/bdd/**/*.steps.ts test/bdd/**/*.feature"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "sql.js": "^1.13.0"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.3.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.19.21",
+    "@types/sql.js": "^1.4.11",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0"
+  }
+}

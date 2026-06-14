@@ -1,0 +1,30 @@
+services:
+  menu-service:
+    build:
+      context: ./menu-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+
+  order-service:
+    build:
+      context: ./order-service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+    volumes:
+      - order-data:/app/data
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - menu-service
+      - order-service
+
+volumes:
+  order-data:
