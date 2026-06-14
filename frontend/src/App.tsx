@@ -28,8 +28,8 @@ type PedidoCriado = {
   total: number;
 };
 
-const urlApiCardapio = 'http://localhost:3002/cardapio';
-const urlApiPedidos = 'http://localhost:3001/pedidos';
+const urlApiCardapio = 'https://burger-menu-api.onrender.com/cardapio';
+const urlApiPedidos = 'https://burger-order-api.onrender.com/pedidos';
 const chaveHistoricoPedidos = 'burger-station-historico-v1';
 
 const formatadorMonetario = new Intl.NumberFormat('pt-BR', {
