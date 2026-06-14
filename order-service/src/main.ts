@@ -1,11 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 
-async function inicializar() {
-  const aplicacao = await NestFactory.create(AppModule);
-  aplicacao.enableCors();
-  const porta = Number(process.env.PORT ?? 3001);
-  await aplicacao.listen(porta);
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.enableCors(); // O 'C' minúsculo no final é importante aqui no Nest!
+  await app.listen(process.env.PORT || 3001);
 }
-
-void inicializar();
+bootstrap();

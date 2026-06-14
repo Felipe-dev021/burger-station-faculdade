@@ -1,21 +1,26 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { FinalizarPedidoUseCase } from '../application/finalize-order.use-case';
-import { ListarPedidosUseCase } from '../application/list-orders.use-case';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { RepositorioPedidoPostgres } from '../infrastructure/postgres-order.repository';
+import { Pedido } from '../domain/order';
 
 @Controller('pedidos')
 export class PedidosController {
-  constructor(
-    private readonly finalizarPedidoUseCase: FinalizarPedidoUseCase,
-    private readonly listarPedidosUseCase: ListarPedidosUseCase,
-  ) {}
+  constructor(private readonly repo: RepositorioPedidoPostgres) {}
 
   @Post()
-  criar(@Body('total') total: number) {
-    return this.finalizarPedidoUseCase.executar(Number(total));
+  async criar(@Body() body: { total: number; mesa: number; itens: string }) {
+    const novoPedido = new Pedido(Date.now(), Number(body.total), Number(body.mesa), 'PENDENTE', body.itens);
+    await this.repo.salvar(novoPedido);
+    return novoPedido;
   }
 
   @Get()
-  buscarTodos() {
-    return this.listarPedidosUseCase.executar();
+  async listar() {
+    return await this.repo.buscarTodos();
+  }
+
+  @Patch(':id/status')
+  async mudarStatus(@Param('id') id: string, @Body('status') status: string) {
+    await this.repo.atualizarStatus(Number(id), status);
+    return { success: true };
   }
 }
