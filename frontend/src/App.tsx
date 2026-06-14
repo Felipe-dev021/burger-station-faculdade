@@ -1,43 +1,46 @@
 import React, { useState, useEffect } from 'react';
+import './styles.css'; 
 
-// Configurações de conexão com as APIs do Render
 const URL_MENU = 'https://burger-menu-api.onrender.com';
 const URL_ORDERS = 'https://burger-order-api.onrender.com';
 
-interface ItemCardapio {
-  id: number;
-  nome: string;
-  preco: number;
-  categoria: string;
-  estoque: number;
-}
-
-interface Pedido {
-  id: number;
-  total: number;
-  mesa: number;
-  status: 'PENDENTE' | 'COZINHA' | 'PRONTO' | 'ENTREGUE';
-  itens: string;
-}
+interface ItemCardapio { id: number; nome: string; preco: number; categoria: string; estoque: number; }
+interface Pedido { id: number; total: number; mesa: number; status: 'PENDENTE' | 'COZINHA' | 'PRONTO' | 'ENTREGUE'; itens: string; }
 
 export default function App() {
-  // Controle de Abas: 'cliente' ou 'admin'
   const [aba, setAba] = useState<'cliente' | 'admin'>('cliente');
-  const [mesa] = useState<number>(() => Math.floor(Math.random() * 10) + 1); // Simula leitura do QR Code da mesa
+  const [autenticado, setAutenticado] = useState(false);
+  const [loginForm, setLoginForm] = useState({ user: '', pass: '' });
+  const [mesa] = useState<number>(() => Math.floor(Math.random() * 15) + 1);
 
-  // Estados dos dados
   const [cardapio, setCardapio] = useState<ItemCardapio[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [carrinho, setCarrinho] = useState<{ [key: number]: number }>({});
 
-  // Mock inicial caso o banco de dados do Neon esteja vazio no primeiro acesso
   useEffect(() => {
-    // Simulando itens padrão se a API demorar ou estiver vazia
-    setCardapio([
-      { id: 1, nome: '🍔 Burger Estelar', preco: 29.9, categoria: 'Lanches', estoque: 15 },
-      { id: 2, nome: '🍟 Batata Cósmica', preco: 14.9, categoria: 'Acompanhamentos', estoque: 20 },
-      { id: 3, nome: '🥤 Refrigerante de Marte', preco: 7.0, categoria: 'Bebidas', estoque: 8 },
-    ]);
+    const carregarMenu = async () => {
+      try {
+        const res = await fetch(`${URL_MENU}/cardapio`);
+        const dados = await res.json();
+        if (Array.isArray(dados) && dados.length > 0) {
+          setCardapio(dados);
+        } else {
+          gerarItensMock();
+        }
+      } catch (e) {
+        gerarItensMock();
+      }
+    };
+
+    const gerarItensMock = () => {
+      setCardapio([
+        { id: 1, nome: 'Gourmet House Burger', preco: 34.90, categoria: 'Lanches', estoque: 15 },
+        { id: 2, nome: 'Batata Rústica com Alecrim', preco: 18.90, categoria: 'Acompanhamentos', estoque: 20 },
+        { id: 3, nome: 'Suco Natural de Frutas', preco: 9.50, categoria: 'Bebidas', estoque: 8 },
+      ]);
+    };
+
+    carregarMenu();
     carregarPedidos();
   }, []);
 
@@ -46,220 +49,165 @@ export default function App() {
       const res = await fetch(`${URL_ORDERS}/pedidos`);
       const dados = await res.json();
       if (Array.isArray(dados)) setPedidos(dados);
-    } catch (e) {
-      console.log("Erro ao buscar pedidos do backend:", e);
-    }
+    } catch (e) { console.log(e); }
   };
 
-  // Funções do Cliente
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loginForm.user === 'admin' && loginForm.pass === 'admin123') {
+      setAutenticado(true);
+    } else { alert("Credenciais Inválidas!"); }
+  };
+
   const adicionarAoCarrinho = (id: number) => {
     const item = cardapio.find(c => c.id === id);
     if (item && item.estoque > (carrinho[id] || 0)) {
       setCarrinho(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-    } else {
-      alert("Desculpe, este item atingiu o limite do estoque da cozinha!");
     }
   };
 
-  const calcularTotal = () => {
-    return Object.entries(carrinho).reduce((sum, [id, qtd]) => {
-      const item = cardapio.find(c => c.id === Number(id));
-      return sum + (item ? item.preco * qtd : 0);
-    }, 0);
-  };
+  const calcularTotal = () => Object.entries(carrinho).reduce((sum, [id, qtd]) => {
+    const item = cardapio.find(c => c.id === Number(id));
+    return sum + (item ? item.preco * qtd : 0);
+  }, 0);
 
-  const enviarPedidoParaCozinha = async () => {
+  const enviarPedido = async () => {
     const total = calcularTotal();
-    if (total === 0) return alert("Seu carrinho está vazio!");
+    if (total === 0) return;
+    const itensTexto = Object.entries(carrinho).map(([id, qtd]) => `${qtd}x ${cardapio.find(c => c.id === Number(id))?.nome}`).join(', ');
 
-    const listaItensTexto = Object.entries(carrinho)
-      .map(([id, qtd]) => {
-        const item = cardapio.find(c => c.id === Number(id));
-        return `${qtd}x ${item?.nome}`;
-      })
-      .join(', ');
+    await fetch(`${URL_ORDERS}/pedidos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ total, mesa, itens: itensTexto }),
+    });
 
-    const payload = { total, mesa, itens: listaItensTexto };
-
-    try {
-      await fetch(`${URL_ORDERS}/pedidos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      // Abate temporário do estoque visualmente
-      setCardapio(prev => prev.map(item => ({
-        ...item,
-        estoque: item.estoque - (carrinho[item.id] || 0)
-      })));
-
-      setCarrinho({});
-      alert(`🚀 Sucesso! Pedido enviado para a Cozinha. Mesa: ${mesa}`);
-      carregarPedidos();
-    } catch (e) {
-      alert("Erro ao enviar pedido para a nuvem.");
-    }
+    setCardapio(prev => prev.map(item => ({ ...item, estoque: item.estoque - (carrinho[item.id] || 0) })));
+    setCarrinho({});
+    alert("Pedido enviado com sucesso para a cozinha!");
+    carregarPedidos();
   };
 
-  // Funções do Admin
-  const atualizarStatusPedido = async (id: number, novoStatus: string) => {
-    try {
-      await fetch(`${URL_ORDERS}/pedidos/${id}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: novoStatus }),
-      });
-      carregarPedidos();
-    } catch (e) {
-      alert("Erro ao atualizar status");
-    }
+  const mudarStatus = async (id: number, status: string) => {
+    await fetch(`${URL_ORDERS}/pedidos/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    carregarPedidos();
   };
 
   return (
-    <div style={{ fontFamily: 'sans-serif', backgroundColor: '#0f172a', color: '#f8fafc', minHeight: '100vh', padding: '20px' }}>
-      {/* Menu Superior de Alternância */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid #334155', paddingBottom: '15px', marginBottom: '20px' }}>
+    <>
+      <nav className="navbar">
+        <h1>Bistro<span className="text-gold">Station</span></h1>
         <div>
-          <h1 style={{ margin: 0, color: '#38bdf8' }}>🌌 Burger Station</h1>
-          <small style={{ color: '#94a3b8' }}>Mesa Atual (QR Code): {mesa}</small>
+          <button className={`btn btn-nav ${aba === 'cliente' ? 'active' : ''}`} onClick={() => setAba('cliente')}>Cardápio</button>
+          <button className="btn btn-secondary" onClick={() => setAba('admin')}>Painel Admin</button>
         </div>
-        <div>
-          <button 
-            onClick={() => setAba('cliente')} 
-            style={{ padding: '10px 20px', marginRight: '10px', borderRadius: '5px', border: 'none', backgroundColor: aba === 'cliente' ? '#38bdf8' : '#334155', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>
-            🛒 Ver Cardápio (Mesa)
-          </button>
-          <button 
-            onClick={() => { setAba('admin'); carregarPedidos(); }} 
-            style={{ padding: '10px 20px', borderRadius: '5px', border: 'none', backgroundColor: aba === 'admin' ? '#f43f5e' : '#334155', color: '#fff', cursor: 'pointer', fontWeight: 'bold' }}>
-            👨‍🍳 Painel Admin / Cozinha
-          </button>
-        </div>
-      </div>
+      </nav>
 
-      {/* VISÃO DO CLIENTE (CARDÁPIO) */}
-      {aba === 'cliente' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
-          <div>
-            <h3>Selecione seus lanches:</h3>
-            {cardapio.map(item => (
-              <div key={item.id} style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong style={{ fontSize: '18px' }}>{item.nome}</strong>
-                  <div style={{ color: '#38bdf8', marginTop: '5px' }}>R$ {item.preco.toFixed(2)}</div>
-                  <small style={{ color: item.estoque > 3 ? '#4ade80' : '#f87171' }}>Estoque disponível: {item.estoque} un</small>
+      <div className="container">
+        {aba === 'cliente' && (
+          <div className="grid-menu">
+            <section>
+              <h2 className="section-title">Mesa <span className="text-gold">{mesa}</span> — Seleção de Pratos</h2>
+              {cardapio.map(item => (
+                <div key={item.id} className="item-card">
+                  <div className="item-info">
+                    <h3>{item.nome}</h3>
+                    <p className="text-gold">R$ {item.preco.toFixed(2)}</p>
+                    <small>Disponível: {item.estoque} un</small>
+                  </div>
+                  <button className="btn btn-primary" onClick={() => adicionarAoCarrinho(item.id)} disabled={item.estoque === 0}>
+                    {item.estoque === 0 ? 'ESGOTADO' : 'ADICIONAR'}
+                  </button>
                 </div>
-                <button 
-                  onClick={() => adicionarAoCarrinho(item.id)}
-                  disabled={item.estoque === 0}
-                  style={{ padding: '10px 15px', backgroundColor: '#38bdf8', border: 'none', color: '#0f172a', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}>
-                  {item.estoque === 0 ? 'Esgotado' : 'Adicionar +'}
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </section>
 
-          {/* Carrinho na Mesa */}
-          <div style={{ backgroundColor: '#1e293b', padding: '20px', borderRadius: '8px', height: 'fit-content' }}>
-            <h3>🛒 Sua Comanda (Mesa {mesa})</h3>
-            {Object.keys(carrinho).length === 0 ? (
-              <p style={{ color: '#64748b' }}>Seu carrinho está vazio.</p>
-            ) : (
-              Object.entries(carrinho).map(([id, qtd]) => {
-                const item = cardapio.find(c => c.id === Number(id));
-                return (
-                  <div key={id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', borderBottom: '1px solid #334155', paddingBottom: '5px' }}>
-                    <span>{qtd}x {item?.nome}</span>
-                    <span>R$ {((item?.preco || 0) * qtd).toFixed(2)}</span>
-                  </div>
-                );
-              })
-            )}
-            <h4 style={{ marginTop: '20px', display: 'flex', justifyContent: 'space-between' }}>
-              <span>Total:</span>
-              <span style={{ color: '#4ade80' }}>R$ {calcularTotal().toFixed(2)}</span>
-            </h4>
-            <button 
-              onClick={enviarPedidoParaCozinha}
-              style={{ width: '100%', padding: '12px', backgroundColor: '#4ade80', color: '#0f172a', border: 'none', borderRadius: '5px', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', marginTop: '10px' }}>
-              🔔 Enviar Pedido para Cozinha
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* VISÃO DO ADMINISTRADOR (GESTÃO E COZINHA) */}
-      {aba === 'admin' && (
-        <div>
-          <h2>👨‍🍳 Monitor de Pedidos da Cozinha (Tempo Real)</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            
-            {/* Coluna de Pedidos Ativos */}
-            <div>
-              <h3>Pedidos em Andamento</h3>
-              {pedidos.length === 0 ? (
-                <p style={{ color: '#64748b' }}>Nenhum pedido recebido pelas mesas ainda.</p>
+            <aside className="comanda-box">
+              <h3 className="comanda-title">🛒 Sua Comanda</h3>
+              {Object.keys(carrinho).length === 0 ? (
+                <p style={{ color: '#6b7280', textAlign: 'center', margin: '20px 0' }}>Selecione os produtos desejados.</p>
               ) : (
-                pedidos.map(p => (
-                  <div key={p.id} style={{ backgroundColor: '#1e293b', padding: '15px', borderRadius: '8px', marginBottom: '15px', borderLeft: `5px solid ${p.status === 'PENDENTE' ? '#ef4444' : p.status === 'COZINHA' ? '#eab308' : '#22c55e'}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <strong>Mesa {p.mesa} <span style={{ color: '#94a3b8' }}>#{p.id.toString().slice(-4)}</span></strong>
-                      <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold', backgroundColor: '#334155' }}>{p.status}</span>
+                Object.keys(carrinho).map(id => {
+                  const item = cardapio.find(c => c.id === Number(id));
+                  return (
+                    <div key={id} className="comanda-item">
+                      <span><strong>{carrinho[Number(id)]}x</strong> {item?.nome}</span>
+                      <span>R$ {((item?.preco || 0) * carrinho[Number(id)]).toFixed(2)}</span>
                     </div>
-                    <p style={{ margin: '10px 0', color: '#cbd5e1' }}>{p.itens}</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ color: '#4ade80', fontWeight: 'bold' }}>R$ {p.total.toFixed(2)}</span>
-                      <div>
-                        {p.status === 'PENDENTE' && (
-                          <button onClick={() => atualizarStatusPedido(p.id, 'COZINHA')} style={{ padding: '5px 10px', backgroundColor: '#eab308', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '5px' }}>Começar a Preparar</button>
-                        )}
-                        {p.status === 'COZINHA' && (
-                          <button onClick={() => atualizarStatusPedido(p.id, 'PRONTO')} style={{ padding: '5px 10px', backgroundColor: '#22c55e', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '5px' }}>Pronto para Servir</button>
-                        )}
-                        {p.status === 'PRONTO' && (
-                          <button onClick={() => atualizarStatusPedido(p.id, 'ENTREGUE')} style={{ padding: '5px 10px', backgroundColor: '#64748b', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer' }}>Finalizar/Entregar</button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
-            </div>
-
-            {/* Painel de Controle de Estoque */}
-            <div style={{ backgroundColor: '#1e293b', padding: '20px', borderRadius: '8px', height: 'fit-content' }}>
-              <h3>📦 Controle de Estoque de Insumos</h3>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #334155', color: '#94a3b8' }}>
-                    <th style={{ paddingBottom: '10px' }}>Item</th>
-                    <th style={{ paddingBottom: '10px' }}>Qtd Atual</th>
-                    <th style={{ paddingBottom: '10px' }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cardapio.map(item => (
-                    <tr key={item.id} style={{ borderBottom: '1px solid #334155' }}>
-                      <td style={{ padding: '10px 0' }}>{item.nome}</td>
-                      <td style={{ padding: '10px 0', fontWeight: 'bold' }}>{item.estoque} un</td>
-                      <td style={{ padding: '10px 0' }}>
-                        <span style={{ color: item.estoque > 5 ? '#22c55e' : item.estoque > 0 ? '#eab308' : '#ef4444', fontWeight: 'bold' }}>
-                          {item.estoque > 5 ? '● Seguro' : item.estoque > 0 ? '● Baixo' : '❌ Crítico'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <button onClick={() => setCardapio(prev => prev.map(i => ({ ...i, estoque: 20 })))} style={{ width: '100%', padding: '10px', marginTop: '20px', backgroundColor: '#334155', border: 'none', color: '#fff', borderRadius: '5px', cursor: 'pointer' }}>
-                🔄 Abastecer Todo o Estoque (Fornecedor)
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', marginTop: '30px' }}>
+                <span>TOTAL:</span>
+                <span className="text-gold">R$ {calcularTotal().toFixed(2)}</span>
+              </div>
+              <button className="btn btn-primary btn-action" onClick={enviarPedido} disabled={calcularTotal() === 0}>
+                CONFIRMAR PEDIDO
               </button>
-            </div>
-
+            </aside>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {aba === 'admin' && (
+          !autenticado ? (
+            <div className="login-box">
+              <h2>Acesso Restrito</h2>
+              <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '14px' }}>Gestão Interna da Cozinha</p>
+              <form onSubmit={handleLogin}>
+                <input type="text" placeholder="Usuário" className="input-field" onChange={e => setLoginForm({...loginForm, user: e.target.value})} />
+                <input type="password" placeholder="Senha" className="input-field" onChange={e => setLoginForm({...loginForm, pass: e.target.value})} />
+                <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>ENTRAR</button>
+              </form>
+            </div>
+          ) : (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <h2>Esteira de Produção</h2>
+                <button className="btn btn-secondary" onClick={() => setAutenticado(false)}>Sair do Painel</button>
+              </div>
+
+              <div className="kanban-board">
+                <div className="kanban-column">
+                  <h3 className="kanban-column-title">📥 Recebidos ({pedidos.filter(p => p.status === 'PENDENTE').length})</h3>
+                  {pedidos.filter(p => p.status === 'PENDENTE').map(p => (
+                    <div key={p.id} className="pedido-ticket">
+                      <div className="pedido-header"><span>Mesa {p.mesa}</span><span className="text-gold">#{p.id.toString().slice(-3)}</span></div>
+                      <p style={{fontSize: '14px', color: '#d1d5db'}}>{p.itens}</p>
+                      <button className="btn btn-secondary btn-action" onClick={() => mudarStatus(p.id, 'COZINHA')}>Preparar</button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="kanban-column" style={{ borderColor: '#f59e0b' }}>
+                  <h3 className="kanban-column-title" style={{ color: '#f59e0b' }}>👨‍🍳 Na Cozinha ({pedidos.filter(p => p.status === 'COZINHA').length})</h3>
+                  {pedidos.filter(p => p.status === 'COZINHA').map(p => (
+                    <div key={p.id} className="pedido-ticket" style={{ borderColor: '#f59e0b' }}>
+                      <div className="pedido-header"><span>Mesa {p.mesa}</span><span className="text-gold">#{p.id.toString().slice(-3)}</span></div>
+                      <p style={{fontSize: '14px', color: '#d1d5db'}}>{p.itens}</p>
+                      <button className="btn btn-primary btn-action" onClick={() => mudarStatus(p.id, 'PRONTO')}>Marcar como Pronto</button>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="kanban-column" style={{ borderColor: '#10b981' }}>
+                  <h3 className="kanban-column-title" style={{ color: '#10b981' }}>✅ Prontos ({pedidos.filter(p => p.status === 'PRONTO').length})</h3>
+                  {pedidos.filter(p => p.status === 'PRONTO').map(p => (
+                    <div key={p.id} className="pedido-ticket" style={{ borderColor: '#10b981' }}>
+                      <div className="pedido-header"><span>Mesa {p.mesa}</span><span className="text-gold">#{p.id.toString().slice(-3)}</span></div>
+                      <p style={{fontSize: '14px', color: '#d1d5db'}}>{p.itens}</p>
+                      <button className="btn btn-secondary btn-action" style={{borderColor: '#10b981', color: '#10b981'}} onClick={() => mudarStatus(p.id, 'ENTREGUE')}>Despachar à Mesa</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        )}
+      </div>
+    </>
   );
 }

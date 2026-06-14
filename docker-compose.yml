@@ -6,6 +6,8 @@ services:
       - "3002:3002"
     environment:
       - PORT=3002
+    env_file:
+      - .env
 
   order-service:
     build:
@@ -14,8 +16,8 @@ services:
       - "3001:3001"
     environment:
       - PORT=3001
-    volumes:
-      - order-data:/app/data
+    env_file:
+      - .env
 
   frontend:
     build:
@@ -25,6 +27,3 @@ services:
     depends_on:
       - menu-service
       - order-service
-
-volumes:
-  order-data:
