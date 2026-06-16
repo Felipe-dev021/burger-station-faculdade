@@ -22,11 +22,11 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        - VITE_MENU_URL=http://localhost:3002
+        - VITE_ORDER_URL=http://localhost:3001
     ports:
       - "8080:80"
-    environment:
-      - VITE_MENU_URL=http://localhost:3002
-      - VITE_ORDER_URL=http://localhost:3001
     depends_on:
       - menu-service
       - order-service

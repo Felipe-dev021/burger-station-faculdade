@@ -6,13 +6,12 @@ Projeto desenvolvido para demonstrar, de forma prática e justificada: Clean Cod
 ## 1. Problema e proposta de solução
 **Problema:** Lanchonetes e bistrôs perdem tempo, dinheiro e organização anotando pedidos em comandas de papel, o que gera erros na cozinha, lentidão no fechamento das contas e dificuldade em gerenciar estoques de forma dinâmica.
 
-**Solução:** O *Burger Station* é um sistema digital de autoatendimento. O cliente visualiza o cardápio e monta sua própria comanda, que calcula descontos dinâmicos (via Strategy) e envia o pedido diretamente para a cozinha. O sistema é resiliente: se o banco de pedidos cair, o catálogo de produtos (cardápio) continua funcionando.
+**Solução:** O *Burger Station* é um sistema digital de autoatendimento. O cliente visualiza o cardápio e monta sua própria comanda, que calcula descontos dinâmicos (via Strategy) e envia o pedido diretamente para a cozinha. O sistema é resiliente e multiplataforma.
 
 ## 2. Divisão em microsserviços
 O backend é dividido em 2 microsserviços independentes (cada um com seu próprio código e banco), consumidos por 1 aplicação web que os integra de forma transparente:
 
 | Microsserviço | Porta | Responsabilidade | Banco | Pasta |
-| :--- | :--- | :--- | :--- | :--- |
 | **order-service** | 3001 | Processamento, cálculo de descontos e pedidos | PostgreSQL | `order-service` |
 | **menu-service** | 3002 | Gestão e listagem do catálogo de produtos | PostgreSQL | `menu-service` |
 | **frontend** | 8080 | Interface única que consome os 2 serviços | — | `frontend` |
@@ -45,7 +44,6 @@ BurgerStation/
 
 ## 4. Stack
 | Camada | Tecnologia |
-| :--- | :--- |
 | **Backend** | NestJS + TypeScript |
 | **Frontend** | React + Vite + TypeScript |
 | **Banco** | PostgreSQL |
@@ -74,7 +72,6 @@ Cada serviço segue a organização em camadas para isolar as regras de negócio
 
 ## 7. Design Patterns (5 Aplicados)
 | Padrão | Onde | Arquivo |
-| :--- | :--- | :--- |
 | **Repository** | Desacoplamento de dados | `repositorios/pedido.repository.ts` |
 | **Factory Method** | Criação centralizada | `fabricas/pedido.factory.ts` |
 | **Strategy** | Descontos dinâmicos | `estrategias/percentage-discount.strategy.ts` |
@@ -84,31 +81,41 @@ Cada serviço segue a organização em camadas para isolar as regras de negócio
 ## 8. Evidências de Clean Code
 - **Linguagem Ubíqua:** Nomes de domínio em português para fidelidade ao negócio.
 - **Composição sobre Herança:** Uso de Decorator para extender funcionalidades.
-- **Ausência de Comentários:** O código é autoexplicativo através de nomes claros.
+- **Ausência de Comentários:** O código é autoexplicativo através de nomes claros e código limpo.
 
 ## 9. TDD e BDD
 - **TDD:** Testes unitários (`npm test`) criados antes da implementação.
 - **BDD:** Cenários Gherkin em português para validação de comportamentos.
 
-## 10. Como rodar localmente
+## 10. Experiência do Usuário (UI/UX)
+O sistema foi projetado com foco em usabilidade e performance:
+- **Design Totalmente Responsivo:** Interface Mobile-First que se adapta perfeitamente a smartphones, tablets e desktops.
+- **Feedback em Tempo Real:** Indicadores de carregamento animados garantem uma navegação fluída.
+- **Painel Administrativo:** Área restrita para a cozinha gerenciar a esteira de produção em tempo real.
+
+## 11. Como rodar localmente
 ```bash
 docker compose up --build
 ```
 Acesse o sistema em [http://localhost:8080](http://localhost:8080).
 
-## 11. 🔗 Acesso ao sistema (Deploy Ativo)
-A aplicação está publicada e funcional utilizando serviços de nuvem gratuitos e escaláveis.
+### Credenciais de Acesso (Avaliação)
+Para acessar o painel administrativo da cozinha:
+- **Usuário:** `admin`
+- **Senha:** `admin123`
+
+## 12. 🔗 Acesso ao sistema (Deploy Ativo)
+A aplicação está publicada e funcional utilizando serviços de nuvem modernos.
 
 | O quê | Link |
-| :--- | :--- |
 | **Aplicação (Frontend)** | [https://burger-station-faculdade-git-main-zezim.vercel.app/](https://burger-station-faculdade-git-main-zezim.vercel.app/) |
 | **API Pedidos (Swagger)** | [https://burger-order-api.onrender.com/docs](https://burger-order-api.onrender.com/docs) |
 | **API Cardápio (Swagger)** | [https://burger-menu-api.onrender.com/docs](https://burger-menu-api.onrender.com/docs) |
 
 > **Nota:** Os serviços no Render entram em hibernação após 15 min de inatividade. O primeiro acesso pode levar cerca de 30 segundos para "acordar".
 
-## 12. Justificativa Técnica das Escolhas
-- **Vercel (Frontend):** Escolhida pela integração nativa com React/Vite e excelente performance global (Edge Network).
-- **Render (Backend):** Utilizado para hospedar os microsserviços em containers Docker de forma isolada e gratuita.
-- **Neon (PostgreSQL):** Banco de dados Serverless que permite separar os dados de cada microsserviço com alta disponibilidade e custo zero para o projeto.
-- **Monorepo:** Facilita a gestão de múltiplos serviços em um único lugar, mantendo a independência de build e deploy de cada um.
+## 13. Justificativa Técnica das Escolhas
+- **Vercel (Frontend):** Alta performance global via Edge Network.
+- **Render (Backend):** Hospedagem isolada de microsserviços via Docker.
+- **Neon (PostgreSQL):** Banco de dados Serverless com alta disponibilidade.
+- **Monorepo:** Facilita a gestão integrada de serviços mantendo a independência técnica.

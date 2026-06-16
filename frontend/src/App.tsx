@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './styles.css'; 
 
-// URLs das APIs - Prioriza variáveis de ambiente do Vite, com fallback para os links de produção
 const env = (import.meta as any).env;
 const URL_MENU = env?.VITE_MENU_URL || 'https://burger-menu-api.onrender.com';
 const URL_ORDERS = env?.VITE_ORDER_URL || 'https://burger-order-api.onrender.com';
@@ -17,11 +16,13 @@ export default function App() {
   const [tipoPagamento, setTipoPagamento] = useState<'PIX' | 'CARTAO'>('PIX');
 
   const [cardapio, setCardapio] = useState<ItemCardapio[]>([]);
+  const [loading, setLoading] = useState(true);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [carrinho, setCarrinho] = useState<{ [key: number]: number }>({});
 
   useEffect(() => {
     const carregarMenu = async () => {
+      setLoading(true);
       try {
         const res = await fetch(`${URL_MENU}/cardapio`);
         const dados = await res.json();
@@ -32,6 +33,8 @@ export default function App() {
         }
       } catch (e) {
         gerarItensMock();
+      } finally {
+        setTimeout(() => setLoading(false), 800);
       }
     };
 
@@ -76,8 +79,8 @@ export default function App() {
 
   const calcularTotalComDesconto = () => {
     const subtotal = calcularSubtotal();
-    if (tipoPagamento === 'PIX') return subtotal * 0.9; // 10% OFF
-    return subtotal + 5; // + Taxa fixa de 5
+    if (tipoPagamento === 'PIX') return subtotal * 0.9;
+    return subtotal + 5;
   };
 
   const enviarPedido = async () => {
@@ -111,7 +114,7 @@ export default function App() {
     <>
       <nav className="navbar">
         <h1>Bistro<span className="text-gold">Station</span></h1>
-        <div>
+        <div className="nav-actions">
           <button className={`btn btn-nav ${aba === 'cliente' ? 'active' : ''}`} onClick={() => setAba('cliente')}>Cardápio</button>
           <button className="btn btn-secondary" onClick={() => setAba('admin')}>Painel Admin</button>
         </div>
@@ -122,18 +125,26 @@ export default function App() {
           <div className="grid-menu">
             <section>
               <h2 className="section-title">Mesa <span className="text-gold">{mesa}</span> — Seleção de Pratos</h2>
-              {cardapio.map(item => (
-                <div key={item.id} className="item-card">
-                  <div className="item-info">
-                    <h3>{item.nome}</h3>
-                    <p className="text-gold">R$ {item.preco.toFixed(2)}</p>
-                    <small>Disponível: {item.estoque} un</small>
-                  </div>
-                  <button className="btn btn-primary" onClick={() => adicionarAoCarrinho(item.id)} disabled={item.estoque === 0}>
-                    {item.estoque === 0 ? 'ESGOTADO' : 'ADICIONAR'}
-                  </button>
+              
+              {loading ? (
+                <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+                  <div className="loading-spinner" style={{ marginBottom: '15px', fontSize: '24px', animation: 'spin 2s linear infinite' }}>⏳</div>
+                  <p>Carregando cardápio gourmet...</p>
                 </div>
-              ))}
+              ) : (
+                cardapio.map(item => (
+                  <div key={item.id} className="item-card">
+                    <div className="item-info">
+                      <h3>{item.nome}</h3>
+                      <p className="text-gold">R$ {item.preco.toFixed(2)}</p>
+                      <small>Disponível: {item.estoque} un</small>
+                    </div>
+                    <button className="btn btn-primary" onClick={() => adicionarAoCarrinho(item.id)} disabled={item.estoque === 0}>
+                      {item.estoque === 0 ? 'ESGOTADO' : 'ADICIONAR'}
+                    </button>
+                  </div>
+                ))
+              )}
             </section>
 
             <aside className="comanda-box">
@@ -152,9 +163,9 @@ export default function App() {
                     );
                   })}
                   
-                  <div className="pagamento-selector" style={{ marginTop: '20px', borderTop: '1px solid #374151', paddingTop: '15px' }}>
+                  <div className="pagamento-selector">
                     <p style={{ fontSize: '14px', marginBottom: '10px' }}>Forma de Pagamento:</p>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                    <div className="pagamento-options">
                       <button 
                         className={`btn ${tipoPagamento === 'PIX' ? 'btn-primary' : 'btn-secondary'}`} 
                         onClick={() => setTipoPagamento('PIX')}
@@ -174,12 +185,12 @@ export default function App() {
                 </>
               )}
 
-              <div style={{ marginTop: '25px', padding: '15px', background: '#1f2937', borderRadius: '8px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#9ca3af' }}>
+              <div className="resumo-box">
+                <div className="resumo-linha">
                   <span>Subtotal:</span>
                   <span>R$ {calcularSubtotal().toFixed(2)}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold', marginTop: '5px' }}>
+                <div className="resumo-total">
                   <span>TOTAL FINAL:</span>
                   <span className="text-gold">R$ {calcularTotalComDesconto().toFixed(2)}</span>
                 </div>
@@ -196,7 +207,14 @@ export default function App() {
           !autenticado ? (
             <div className="login-box">
               <h2>Acesso Restrito</h2>
-              <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '14px' }}>Gestão Interna da Cozinha</p>
+              <p style={{ color: '#6b7280', marginBottom: '12px', fontSize: '14px' }}>Gestão Interna da Cozinha</p>
+              
+              <div style={{ background: '#1c2330', padding: '10px', borderRadius: '6px', marginBottom: '20px', fontSize: '12px', border: '1px solid #fbbf24' }}>
+                <p className="text-gold" style={{ fontWeight: 'bold', marginBottom: '4px' }}>Acesso para Avaliação:</p>
+                <p>Usuário: <code style={{ color: '#fff' }}>admin</code></p>
+                <p>Senha: <code style={{ color: '#fff' }}>admin123</code></p>
+              </div>
+
               <form onSubmit={handleLogin}>
                 <input type="text" placeholder="Usuário" className="input-field" onChange={e => setLoginForm({...loginForm, user: e.target.value})} />
                 <input type="password" placeholder="Senha" className="input-field" onChange={e => setLoginForm({...loginForm, pass: e.target.value})} />
@@ -205,7 +223,7 @@ export default function App() {
             </div>
           ) : (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <div className="admin-header">
                 <h2>Esteira de Produção</h2>
                 <button className="btn btn-secondary" onClick={() => setAutenticado(false)}>Sair do Painel</button>
               </div>
@@ -217,7 +235,7 @@ export default function App() {
                     <div key={p.id} className="pedido-ticket">
                       <div className="pedido-header"><span>Mesa {p.mesa}</span><span className="text-gold">#{p.id.toString().slice(-3)}</span></div>
                       <p style={{fontSize: '14px', color: '#d1d5db'}}>{p.itens}</p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                      <div className="pedido-footer">
                         <span style={{ fontWeight: 'bold' }}>R$ {p.total.toFixed(2)}</span>
                         <button className="btn btn-secondary" style={{ padding: '5px 10px', fontSize: '12px' }} onClick={() => mudarStatus(p.id, 'COZINHA')}>Preparar</button>
                       </div>
@@ -231,7 +249,7 @@ export default function App() {
                     <div key={p.id} className="pedido-ticket" style={{ borderColor: '#f59e0b' }}>
                       <div className="pedido-header"><span>Mesa {p.mesa}</span><span className="text-gold">#{p.id.toString().slice(-3)}</span></div>
                       <p style={{fontSize: '14px', color: '#d1d5db'}}>{p.itens}</p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                      <div className="pedido-footer">
                          <span style={{ fontWeight: 'bold' }}>R$ {p.total.toFixed(2)}</span>
                          <button className="btn btn-primary" style={{ padding: '5px 10px', fontSize: '12px' }} onClick={() => mudarStatus(p.id, 'PRONTO')}>Pronto</button>
                       </div>
@@ -245,7 +263,7 @@ export default function App() {
                     <div key={p.id} className="pedido-ticket" style={{ borderColor: '#10b981' }}>
                       <div className="pedido-header"><span>Mesa {p.mesa}</span><span className="text-gold">#{p.id.toString().slice(-3)}</span></div>
                       <p style={{fontSize: '14px', color: '#d1d5db'}}>{p.itens}</p>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                      <div className="pedido-footer">
                         <span style={{ fontWeight: 'bold' }}>R$ {p.total.toFixed(2)}</span>
                         <button className="btn btn-secondary" style={{borderColor: '#10b981', color: '#10b981', padding: '5px 10px', fontSize: '12px'}} onClick={() => mudarStatus(p.id, 'ENTREGUE')}>Despachar</button>
                       </div>
@@ -258,11 +276,11 @@ export default function App() {
         )}
       </div>
 
-      <footer className="footer" style={{ marginTop: '50px', padding: '20px', borderTop: '1px solid #374151', textAlign: 'center', fontSize: '12px', color: '#6b7280' }}>
+      <footer className="footer">
         <p>Burger Station — Projeto de Arquitetura de Software</p>
-        <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'center', gap: '20px' }}>
-          <span>API Menu: <a href={URL_MENU} target="_blank" rel="noreferrer" style={{ color: '#f59e0b' }}>{URL_MENU}</a></span>
-          <span>API Pedidos: <a href={URL_ORDERS} target="_blank" rel="noreferrer" style={{ color: '#f59e0b' }}>{URL_ORDERS}</a></span>
+        <div className="footer-links">
+          <span>API Menu: <a href={URL_MENU} target="_blank" rel="noreferrer">{URL_MENU}</a></span>
+          <span>API Pedidos: <a href={URL_ORDERS} target="_blank" rel="noreferrer">{URL_ORDERS}</a></span>
         </div>
       </footer>
     </>

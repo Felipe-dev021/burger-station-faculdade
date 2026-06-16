@@ -16,4 +16,10 @@ export class RepositorioPedidoLogDecorator implements RepositorioPedido {
     console.log(`[LOG] Foram encontrados ${resultados.length} pedidos.`);
     return resultados;
   }
+
+  async atualizarStatus(id: number, status: string): Promise<void> {
+    console.log(`[LOG] Atualizando status do pedido #${id} para ${status}...`);
+    await this.decorado.atualizarStatus(id, status);
+    console.log(`[LOG] Status do pedido #${id} atualizado com sucesso!`);
+  }
 }

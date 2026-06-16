@@ -14,7 +14,6 @@ import { RepositorioCardapioPostgres } from './infrastructure/repositorio-cardap
         if (!dbUrl) throw new Error('DATABASE_URL do Cardápio não configurada!');
         const pool = new Pool({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
 
-        // Cria a tabela de itens do cardápio se não existir
         await pool.query(`
           CREATE TABLE IF NOT EXISTS cardapio (
             id SERIAL PRIMARY KEY,

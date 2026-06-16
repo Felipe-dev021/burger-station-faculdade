@@ -1,6 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap');
 
-/* CONFIGURAÇÃO BASE - CARDÁPIO GOURMET PRO */
 * {
   margin: 0;
   padding: 0;
@@ -21,10 +20,9 @@ h1, h2, h3 {
 }
 
 .text-gold {
-  color: #fbbf24; /* Detalhes em Âmbar/Dourado */
+  color: #fbbf24;
 }
 
-/* NAVBAR PROFISSONAL */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -42,13 +40,17 @@ h1, h2, h3 {
   letter-spacing: -0.5px;
 }
 
+.nav-actions {
+  display: flex;
+  gap: 10px;
+}
+
 .container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 40px 4%;
 }
 
-/* LAYOUT CLIENTE */
 .grid-menu {
   display: grid;
   grid-template-columns: 1.6fr 1fr;
@@ -63,7 +65,6 @@ h1, h2, h3 {
   padding-bottom: 12px;
 }
 
-/* CARDS DE ITENS DO CARDÁPIO */
 .item-card {
   background-color: #13171f;
   border: 1px solid #1f2937;
@@ -74,10 +75,15 @@ h1, h2, h3 {
   align-items: center;
   margin-bottom: 20px;
   transition: border-color 0.2s ease;
+  gap: 15px;
 }
 
 .item-card:hover {
   border-color: #fbbf24;
+}
+
+.item-info {
+  flex: 1;
 }
 
 .item-info h3 {
@@ -95,7 +101,6 @@ h1, h2, h3 {
   color: #9ca3af;
 }
 
-/* SACLA / COMANDA LATERAL */
 .comanda-box {
   background-color: #13171f;
   border: 1px solid #1f2937;
@@ -119,14 +124,55 @@ h1, h2, h3 {
   padding: 12px 0;
   border-bottom: 1px dashed #1f2937;
   font-size: 15px;
+  gap: 10px;
 }
 
-/* PAINEL KANBAN DA COZINHA (ESTEIRA DE PRODUÇÃO) */
+.pagamento-selector {
+  margin-top: 20px;
+  border-top: 1px solid #374151;
+  padding-top: 15px;
+}
+
+.pagamento-options {
+  display: flex;
+  gap: 10px;
+}
+
+.resumo-box {
+  margin-top: 25px;
+  padding: 15px;
+  background: #1f2937;
+  border-radius: 8px;
+}
+
+.resumo-linha {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.resumo-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 18px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
 .kanban-board {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 24px;
   margin-top: 30px;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 15px;
 }
 
 .kanban-column {
@@ -164,7 +210,13 @@ h1, h2, h3 {
   font-weight: bold;
 }
 
-/* FORMULÁRIO DE LOGIN MINIMALISTA */
+.pedido-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
 .login-box {
   max-width: 380px;
   margin: 80px auto;
@@ -191,7 +243,6 @@ h1, h2, h3 {
   border-color: #fbbf24;
 }
 
-/* SISTEMA DE BOTÕES PADRÃO */
 .btn {
   padding: 10px 20px;
   border: none;
@@ -200,6 +251,7 @@ h1, h2, h3 {
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   transition: background-color 0.2s;
+  white-space: nowrap;
 }
 
 .btn-primary { background-color: #fbbf24; color: #0d0f12; }
@@ -213,8 +265,115 @@ h1, h2, h3 {
 .btn-nav { background: transparent; color: #9ca3af; margin-right: 15px; }
 .btn-nav.active { color: #fbbf24; border-bottom: 2px solid #fbbf24; border-radius: 0; padding-bottom: 4px; }
 
-/* RESPONSIVIDADE */
+.footer {
+  margin-top: 50px;
+  padding: 40px 20px;
+  border-top: 1px solid #374151;
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.footer-links {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.footer-links span {
+  display: block;
+}
+
+.footer-links a {
+  color: #f59e0b;
+  text-decoration: none;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  display: inline-block;
+}
+
 @media (max-width: 1024px) {
-  .grid-menu { grid-template-columns: 1fr; }
-  .kanban-board { grid-template-columns: 1fr; }
+  .navbar {
+    padding: 15px 4%;
+  }
+
+  .grid-menu { 
+    grid-template-columns: 1fr; 
+  }
+
+  .comanda-box {
+    position: static;
+    margin-top: 20px;
+  }
+
+  .kanban-board { 
+    grid-template-columns: 1fr 1fr; 
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .nav-actions {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn-nav {
+    margin-right: 0;
+  }
+
+  .container {
+    padding: 20px 4%;
+  }
+
+  .kanban-board { 
+    grid-template-columns: 1fr; 
+  }
+
+  .item-card {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .item-card .btn {
+    width: 100%;
+  }
+
+  .admin-header {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .pagamento-options {
+    flex-direction: column;
+  }
+
+  .comanda-item {
+    font-size: 14px;
+  }
+
+  .section-title {
+    font-size: 20px;
+  }
+
+  .footer-links {
+    flex-direction: column;
+    gap: 10px;
+  }
 }

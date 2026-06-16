@@ -8,7 +8,6 @@ export class RepositorioCardapioPostgres implements RepositorioCardapio {
   async buscarTodos(): Promise<ItemCardapio[]> {
     const { rows } = await this.pool.query('SELECT * FROM cardapio ORDER BY id ASC');
     
-    // Se o banco estiver vazio, insere alguns itens iniciais para demonstração
     if (rows.length === 0) {
       await this.semearDados();
       const retry = await this.pool.query('SELECT * FROM cardapio ORDER BY id ASC');
