@@ -13,6 +13,11 @@ export class PedidosController {
     private readonly mudarStatusUseCase: MudarStatusPedidoUseCase
   ) {}
 
+  @Get('ping')
+  ping() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
+
   @Post()
   async criar(@Body() body: { total: number; mesa: number; itens: string; tipoPagamento?: string }) {
     const estrategia = body.tipoPagamento === 'PIX' 

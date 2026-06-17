@@ -20,20 +20,39 @@ export default function App() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [carrinho, setCarrinho] = useState<{ [key: number]: number }>({});
 
+  const [isWakingUp, setIsWakingUp] = useState(false);
+
   useEffect(() => {
+    const fetchWithRetry = async (url: string, retries = 3, delay = 3000): Promise<any> => {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return await res.json();
+      } catch (e) {
+        if (retries > 0) {
+          setIsWakingUp(true);
+          console.log(`Tentando reconectar a ${url}... (${retries} tentativas restantes)`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return fetchWithRetry(url, retries - 1, delay);
+        }
+        throw e;
+      }
+    };
+
     const carregarMenu = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${URL_MENU}/cardapio`);
-        const dados = await res.json();
+        const dados = await fetchWithRetry(`${URL_MENU}/cardapio`, 5, 5000);
         if (Array.isArray(dados) && dados.length > 0) {
           setCardapio(dados);
         } else {
           gerarItensMock();
         }
       } catch (e) {
+        console.error("Erro ao carregar menu, usando dados locais.", e);
         gerarItensMock();
       } finally {
+        setIsWakingUp(false);
         setTimeout(() => setLoading(false), 800);
       }
     };
@@ -129,7 +148,8 @@ export default function App() {
               {loading ? (
                 <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
                   <div className="loading-spinner" style={{ marginBottom: '15px', fontSize: '24px', animation: 'spin 2s linear infinite' }}>⏳</div>
-                  <p>Carregando cardápio gourmet...</p>
+                  <p>{isWakingUp ? 'Acordando servidores (Render)...' : 'Carregando cardápio gourmet...'}</p>
+                  {isWakingUp && <small style={{ display: 'block', marginTop: '10px', color: '#6b7280' }}>Isso pode levar até 30 segundos se os serviços estiverem hibernando.</small>}
                 </div>
               ) : (
                 cardapio.map(item => (
